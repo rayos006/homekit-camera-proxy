@@ -1,6 +1,6 @@
 {
   "name": "homekit-camera-proxy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal HomeKit bridge for Frigate cameras: live streaming, snapshots, motion sensors, two-way audio, doorbell",
   "private": true,
   "type": "module",

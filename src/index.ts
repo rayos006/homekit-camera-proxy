@@ -1,6 +1,5 @@
 import { mkdirSync } from "node:fs";
 import { HAPStorage } from "@homebridge/hap-nodejs";
-import { createBridge, publishBridge } from "./bridge.js";
 import { buildCameraAccessory, type CameraAccessory } from "./camera/accessory.js";
 import { SnapshotFetcher } from "./camera/snapshot.js";
 import { loadConfig } from "./config.js";
@@ -9,6 +8,7 @@ import { createLogger } from "./logger.js";
 import { DoorbellEventSource } from "./doorbell/onvif-events.js";
 import { FrigateWsClient } from "./motion/frigate-ws.js";
 import { MotionHandler } from "./motion/motion-handler.js";
+import { publishCameraAccessory } from "./publish.js";
 
 const log = createLogger("main");
 
@@ -23,36 +23,31 @@ async function main(): Promise<void> {
 
   const snapshots = new SnapshotFetcher(config.frigate.apiBaseUrl);
   const ws = new FrigateWsClient(config.frigate.apiBaseUrl);
-  const bridge = createBridge(config);
 
   const accessories: CameraAccessory[] = [];
   const doorbells: DoorbellEventSource[] = [];
+  let publishedCount = 0;
 
   for (const camera of config.cameras) {
     const cam = buildCameraAccessory(config, camera, snapshots);
     new MotionHandler(camera, ws, cam.setMotion);
     if (camera.doorbell && cam.ring) {
-      const source = new DoorbellEventSource(camera, cam.ring);
-      doorbells.push(source);
+      doorbells.push(new DoorbellEventSource(camera, cam.ring));
     }
-    bridge.addBridgedAccessory(cam.accessory);
+    try {
+      await publishCameraAccessory(cam.accessory, camera, config);
+      publishedCount++;
+    } catch (err) {
+      log.error("accessory publish failed", { name: camera.name, error: String(err) });
+    }
     accessories.push(cam);
-    log.info("camera added", { name: camera.name, doorbell: !!camera.doorbell });
-  }
-
-  let bridgePublished = false;
-  try {
-    await publishBridge(bridge, config);
-    bridgePublished = true;
-  } catch (err) {
-    log.error("bridge publish failed", { error: String(err) });
   }
 
   ws.start();
   for (const doorbell of doorbells) doorbell.start();
 
   const health = startHealthServer(config.healthPort, () => ({
-    bridgePublished,
+    published: publishedCount,
     wsConnected: ws.connected,
     cameras: accessories.length,
     activeStreams: accessories.reduce((n, a) => n + a.delegate.activeStreamCount, 0),
@@ -69,7 +64,9 @@ async function main(): Promise<void> {
     for (const d of doorbells) d.stop();
     ws.stop();
     health.close();
-    void bridge.unpublish().finally(() => process.exit(0));
+    void Promise.allSettled(accessories.map((a) => a.accessory.unpublish())).finally(() =>
+      process.exit(0),
+    );
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));

@@ -2,15 +2,18 @@
 #
 # Values may reference environment variables with ${VAR_NAME}; the process
 # exits at startup if a referenced variable is unset.
+#
+# Each camera is published as its own standalone HomeKit accessory (not a
+# bridge): HAP serializes requests per connection, so bridged cameras would
+# delay each other's snapshots. Pair each camera individually (same PIN).
 
-bridge:
-  name: Frigate Cameras
+hap:
   # HomeKit pairing PIN, format XXX-XX-XXX. Override with HKCP_PINCODE env var.
   pincode: "031-45-154"
-  # HAP TCP port (hostNetwork: must be free on the node).
-  port: 51826
-  # Seed for the bridge's stable MAC-like identifier. Changing it unpairs
-  # the bridge from HomeKit — bump only to force a factory reset.
+  # Camera N listens on basePort+N (or set hapPort per camera).
+  basePort: 51826
+  # Seed for each accessory's stable identity (combined with the camera name).
+  # Changing it — or renaming a camera — unpairs that accessory from HomeKit.
   usernameSeed: frigate-cameras-v1
 
 frigate:

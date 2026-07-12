@@ -1,7 +1,8 @@
 # homekit-camera-proxy
 
-A minimal HomeKit bridge for [Frigate](https://frigate.video) cameras. Publishes each Frigate
-camera to Apple Home with:
+A minimal HomeKit proxy for [Frigate](https://frigate.video) cameras. Publishes each Frigate
+camera to Apple Home as its own standalone accessory (accessory mode — HAP serializes
+requests per connection, so bridged cameras would delay each other) with:
 
 - **Live streaming** — ffmpeg relays the go2rtc RTSP restream as SRTP (H.264 `-c:v copy` by default)
 - **Snapshots** — served from Frigate's `latest.jpg` API (no ffmpeg spawn)
@@ -18,10 +19,9 @@ with `${VAR_NAME}`.
 
 Notes:
 
-- `bridge.usernameSeed` derives the bridge's stable HAP identifier. Changing it (or
-  `persistDir` contents being lost) unpairs the bridge from HomeKit.
-- Renaming a camera (`name`) creates a new HomeKit accessory; room assignments and
-  automations for the old one are lost.
+- `hap.usernameSeed` + the camera name derive each accessory's stable HAP identity.
+  Changing the seed, renaming a camera, or losing `persistDir` unpairs that accessory
+  from HomeKit (room assignments and automations for it are lost).
 - `streams.main`/`streams.sub` are go2rtc stream names, or full `rtsp://` URLs to bypass
   Frigate and connect to a camera directly.
 - Two-way audio requires the camera's go2rtc source to have a backchannel (e.g. Reolink:

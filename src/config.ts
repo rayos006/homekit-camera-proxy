@@ -27,6 +27,8 @@ const cameraSchema = z
       })
       .default({ labels: [], resetSeconds: 30 }),
     doorbell: z.object({ onvif: onvifSchema }).optional(),
+    /** HAP port override; defaults to hap.basePort + position in the list. */
+    hapPort: z.number().int().positive().optional(),
   })
   .transform((cam) => ({
     ...cam,
@@ -35,10 +37,12 @@ const cameraSchema = z
   }));
 
 const configSchema = z.object({
-  bridge: z.object({
-    name: z.string().min(1).default("Frigate Cameras"),
+  // Each camera publishes as its own HomeKit accessory (accessory mode, not a
+  // bridge): HAP serializes requests per connection, so bridged cameras
+  // head-of-line block each other; standalone cameras degrade independently.
+  hap: z.object({
     pincode: z.string().regex(/^\d{3}-\d{2}-\d{3}$/, "pincode must look like 031-45-154"),
-    port: z.number().int().positive().default(51826),
+    basePort: z.number().int().positive().default(51826),
     usernameSeed: z.string().min(1),
   }),
   frigate: z.object({
@@ -80,12 +84,16 @@ export function loadConfig(path: string): AppConfig {
     throw new Error(`invalid config ${path}:\n${issues}`);
   }
   const config = parsed.data;
-  if (process.env.HKCP_PINCODE) config.bridge.pincode = process.env.HKCP_PINCODE;
+  if (process.env.HKCP_PINCODE) config.hap.pincode = process.env.HKCP_PINCODE;
 
   const names = new Set<string>();
-  for (const cam of config.cameras) {
+  const ports = new Set<number>();
+  config.cameras.forEach((cam, i) => {
     if (names.has(cam.name)) throw new Error(`duplicate camera name in config: ${cam.name}`);
     names.add(cam.name);
-  }
+    cam.hapPort ??= config.hap.basePort + i;
+    if (ports.has(cam.hapPort)) throw new Error(`duplicate hapPort in config: ${cam.hapPort}`);
+    ports.add(cam.hapPort);
+  });
   return config;
 }

@@ -16,7 +16,8 @@ import type {
   StreamRequestTypes,
 } from "@homebridge/hap-nodejs";
 
-export const CATEGORY_BRIDGE = 2 as Categories.BRIDGE;
+export const CATEGORY_IP_CAMERA = 17 as Categories.IP_CAMERA;
+export const CATEGORY_VIDEO_DOORBELL = 18 as Categories.VIDEO_DOORBELL;
 export const ADVERTISER_CIAO = "ciao" as MDNSAdvertiser.CIAO;
 export const SRTP_AES_CM_128 = 0 as SRTPCryptoSuites.AES_CM_128_HMAC_SHA1_80;
 export const H264_PROFILES = [0, 1, 2] as H264Profile[]; // BASELINE, MAIN, HIGH
