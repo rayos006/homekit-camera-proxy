@@ -1,0 +1,6 @@
+node_modules/
+dist/
+persist/
+config.local.yaml
+*.log
+.claude/

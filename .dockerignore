@@ -1,0 +1,7 @@
+node_modules
+dist
+persist
+config.local.yaml
+.git
+.github
+*.md

@@ -1,0 +1,55 @@
+# homekit-camera-proxy configuration
+#
+# Values may reference environment variables with ${VAR_NAME}; the process
+# exits at startup if a referenced variable is unset.
+
+bridge:
+  name: Frigate Cameras
+  # HomeKit pairing PIN, format XXX-XX-XXX. Override with HKCP_PINCODE env var.
+  pincode: "031-45-154"
+  # HAP TCP port (hostNetwork: must be free on the node).
+  port: 51826
+  # Seed for the bridge's stable MAC-like identifier. Changing it unpairs
+  # the bridge from HomeKit — bump only to force a factory reset.
+  usernameSeed: frigate-cameras-v1
+
+frigate:
+  # Frigate's internal (unauthenticated) API — snapshots + /ws motion events.
+  apiBaseUrl: http://frigate.frigate.svc.cluster.local:5000
+  # go2rtc RTSP restream base.
+  rtspBaseUrl: rtsp://frigate.frigate.svc.cluster.local:8554
+
+# HAP pairing state lives here — must be persistent across restarts.
+persistDir: /data/persist
+
+healthPort: 9891
+
+# Path to an ffmpeg with libfdk_aac (bundled in the Docker image).
+ffmpegPath: ffmpeg
+
+cameras:
+  - name: Back Yard          # HomeKit display name (renaming = new accessory)
+    frigateName: back_yard   # Frigate camera name (snapshots + motion topics)
+    streams:
+      main: back_yard        # go2rtc stream name, or a full rtsp:// URL
+      sub: back_yard_sub     # optional; used for low-res requests
+    audio: false
+    videoCodec: copy         # copy | libx264
+    motion:
+      labels: [person]       # object labels; [] or [motion] = raw motion topic
+      resetSeconds: 30
+
+  - name: Doorbell
+    frigateName: doorbell
+    streams:
+      main: doorbell
+    audio: true
+    twoWayAudio: true        # talkback via go2rtc backchannel
+    motion:
+      labels: [person]
+    doorbell:                # presence makes this a HomeKit Doorbell accessory
+      onvif:                 # button presses come straight from the camera
+        host: 192.168.4.100
+        port: 8000
+        username: admin
+        password: ${ONVIF_DOORBELL_PASSWORD}
