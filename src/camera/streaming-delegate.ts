@@ -168,6 +168,14 @@ export class FrigateStreamingDelegate implements CameraStreamingDelegate {
     const args: string[] = [
       "-hide_banner",
       "-loglevel", "warning",
+      // low-latency input: don't buffer, cap probe/analyze so playback starts
+      // as soon as the first keyframe lands (the camera's GOP length is the
+      // real floor on startup — shorten its I-frame interval to go faster).
+      // NB: no global `-flags low_delay` — it leaks into the AAC-ELD encoder
+      // and breaks it ("Transport library initialization error").
+      "-fflags", "nobuffer",
+      "-probesize", "1000000",
+      "-analyzeduration", "1000000",
       "-rtsp_transport", "tcp",
       "-i", input,
       "-sn", "-dn",
