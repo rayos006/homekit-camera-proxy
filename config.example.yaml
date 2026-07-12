@@ -21,6 +21,11 @@ frigate:
   apiBaseUrl: http://frigate.frigate.svc.cluster.local:5000
   # go2rtc RTSP restream base.
   rtspBaseUrl: rtsp://frigate.frigate.svc.cluster.local:8554
+  # Auto-discover cameras from Frigate's config API on startup. Each enabled
+  # camera with a go2rtc restream is published automatically (main = <name>,
+  # sub = <name>_sub if it exists, motion = person). Set false to use only
+  # the cameras listed below.
+  discover: true
 
 # HAP pairing state lives here — must be persistent across restarts.
 persistDir: /data/persist
@@ -30,29 +35,33 @@ healthPort: 9891
 # Path to an ffmpeg with libfdk_aac (bundled in the Docker image).
 ffmpegPath: ffmpeg
 
+# With discovery on, this list is OPTIONAL and holds overrides. An entry is
+# matched to a discovered camera by `frigateName`; the fields you set win,
+# the rest come from discovery. An entry whose `frigateName` isn't in Frigate
+# is treated as a fully-manual camera (must then supply name + streams.main).
 cameras:
-  - name: Back Yard          # HomeKit display name (renaming = new accessory)
-    frigateName: back_yard   # Frigate camera name (snapshots + motion topics)
+  # Override a discovered camera: add a low-res sub stream + two-way audio.
+  - frigateName: front_yard
     streams:
-      main: back_yard        # go2rtc stream name, or a full rtsp:// URL
-      sub: back_yard_sub     # optional; used for low-res requests
-    audio: false
-    videoCodec: copy         # copy | libx264
-    motion:
-      labels: [person]       # object labels; [] or [motion] = raw motion topic
-      resetSeconds: 30
-
-  - name: Doorbell
-    frigateName: doorbell
-    streams:
-      main: doorbell
+      sub: rtsp://admin:${AMCREST_RTSP_PASSWORD}@192.168.2.13:554/cam/realmonitor?channel=1&subtype=1
     audio: true
-    twoWayAudio: true        # talkback via go2rtc backchannel
+    twoWayAudio: true
     motion:
-      labels: [person]
-    doorbell:                # presence makes this a HomeKit Doorbell accessory
-      onvif:                 # button presses come straight from the camera
+      labels: [person, car]
+
+  # A doorbell discovery can't infer: two-way audio + ONVIF ring events.
+  - frigateName: doorbell
+    audio: true
+    twoWayAudio: true
+    doorbell:
+      onvif:
         host: 192.168.4.100
         port: 8000
         username: admin
         password: ${ONVIF_DOORBELL_PASSWORD}
+
+  # A camera Frigate doesn't manage — fully manual (no discovery match).
+  # - frigateName: garage
+  #   name: Garage
+  #   streams:
+  #     main: rtsp://user:${GARAGE_PASSWORD}@192.168.2.20:554/stream1

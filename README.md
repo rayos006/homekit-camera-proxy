@@ -17,11 +17,23 @@ Explicitly **not** supported: HomeKit Secure Video recording (Frigate is the NVR
 See [config.example.yaml](config.example.yaml). Values may reference environment variables
 with `${VAR_NAME}`.
 
+**Auto-discovery** (`frigate.discover: true`, the default): on startup the proxy reads
+Frigate's config API and publishes every enabled camera that has a go2rtc restream —
+`main = <name>`, `sub = <name>_sub` if it exists, motion on `person`, display name
+title-cased from the Frigate name. No per-camera config needed for the common case.
+
+The `cameras` list then holds **overrides**, matched to a discovered camera by
+`frigateName`; fields you set win, the rest come from discovery. Use it to add a sub
+stream, enable two-way audio, widen motion labels, or declare a doorbell (discovery
+can't infer ONVIF ring). An entry whose `frigateName` isn't in Frigate becomes a
+fully-manual camera (must supply `name` + `streams.main`). Set `discover: false` to use
+the `cameras` list exclusively.
+
 Notes:
 
 - `hap.usernameSeed` + the camera name derive each accessory's stable HAP identity.
-  Changing the seed, renaming a camera, or losing `persistDir` unpairs that accessory
-  from HomeKit (room assignments and automations for it are lost).
+  Changing the seed, renaming a camera (in Frigate or via a `name` override), or losing
+  `persistDir` unpairs that accessory from HomeKit (room/automation assignments lost).
 - `streams.main`/`streams.sub` are go2rtc stream names, or full `rtsp://` URLs to bypass
   Frigate and connect to a camera directly.
 - Two-way audio requires the camera's go2rtc source to have a backchannel (e.g. Reolink:
@@ -43,6 +55,6 @@ state on a persistent volume at `persistDir`.
 
 ## Health
 
-`GET /healthz` (default port 9891) returns `{bridgePublished, wsConnected, cameras, activeStreams}`.
-Returns 503 only if the bridge failed to publish — a dropped Frigate connection degrades
+`GET /healthz` (default port 9891) returns `{published, wsConnected, cameras, activeStreams}`.
+Returns 503 only if no accessory published at all — a dropped Frigate connection degrades
 motion/snapshots but must not restart the pod, since live streaming still works.

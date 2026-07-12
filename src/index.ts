@@ -2,7 +2,8 @@ import { mkdirSync } from "node:fs";
 import { HAPStorage } from "@homebridge/hap-nodejs";
 import { buildCameraAccessory, type CameraAccessory } from "./camera/accessory.js";
 import { SnapshotFetcher } from "./camera/snapshot.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, resolveCameras } from "./config.js";
+import { discoverFrigateCameras } from "./frigate/discovery.js";
 import { startHealthServer } from "./health.js";
 import { createLogger } from "./logger.js";
 import { DoorbellEventSource } from "./doorbell/onvif-events.js";
@@ -15,7 +16,13 @@ const log = createLogger("main");
 async function main(): Promise<void> {
   const configPath = process.argv[2] ?? process.env.CONFIG_PATH ?? "/config/config.yaml";
   const config = loadConfig(configPath);
-  log.info("config loaded", { path: configPath, cameras: config.cameras.length });
+  log.info("config loaded", { path: configPath, discover: config.frigate.discover, overrides: config.cameras.length });
+
+  const discovered = config.frigate.discover
+    ? await discoverFrigateCameras(config.frigate.apiBaseUrl)
+    : [];
+  const cameras = resolveCameras(config, discovered);
+  log.info("cameras resolved", { count: cameras.length, cameras: cameras.map((c) => c.frigateName) });
 
   // Must run before any Accessory is constructed.
   mkdirSync(config.persistDir, { recursive: true });
@@ -28,7 +35,7 @@ async function main(): Promise<void> {
   const doorbells: DoorbellEventSource[] = [];
   let publishedCount = 0;
 
-  for (const camera of config.cameras) {
+  for (const camera of cameras) {
     const cam = buildCameraAccessory(config, camera, snapshots);
     new MotionHandler(camera, ws, cam.setMotion);
     if (camera.doorbell && cam.ring) {
