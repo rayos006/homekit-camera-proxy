@@ -23,8 +23,8 @@ frigate:
   rtspBaseUrl: rtsp://frigate.frigate.svc.cluster.local:8554
   # Auto-discover cameras from Frigate's config API on startup. Each enabled
   # camera with a go2rtc restream is published automatically (main = <name>,
-  # sub = <name>_sub if it exists, motion = person). Set false to use only
-  # the cameras listed below.
+  # sub = <name>_sub if it exists, audio on, motion = person). Set false to
+  # use only the cameras listed below.
   discover: true
 
 # HAP pairing state lives here — must be persistent across restarts.
@@ -40,11 +40,11 @@ ffmpegPath: ffmpeg
 # the rest come from discovery. An entry whose `frigateName` isn't in Frigate
 # is treated as a fully-manual camera (must then supply name + streams.main).
 cameras:
-  # Override a discovered camera: add a low-res sub stream + two-way audio.
+  # Override a discovered camera: add a low-res sub stream + two-way audio
+  # (one-way audio is already on from discovery), widen motion labels.
   - frigateName: front_yard
     streams:
       sub: rtsp://admin:${AMCREST_RTSP_PASSWORD}@192.168.2.13:554/cam/realmonitor?channel=1&subtype=1
-    audio: true
     twoWayAudio: true
     motion:
       labels: [person, car]

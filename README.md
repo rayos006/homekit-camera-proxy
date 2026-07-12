@@ -19,8 +19,9 @@ with `${VAR_NAME}`.
 
 **Auto-discovery** (`frigate.discover: true`, the default): on startup the proxy reads
 Frigate's config API and publishes every enabled camera that has a go2rtc restream —
-`main = <name>`, `sub = <name>_sub` if it exists, motion on `person`, display name
-title-cased from the Frigate name. No per-camera config needed for the common case.
+`main = <name>`, `sub = <name>_sub` if it exists, audio on (mute in the Home app if
+unwanted), motion on `person`, display name title-cased from the Frigate name. No
+per-camera config needed for the common case.
 
 The `cameras` list then holds **overrides**, matched to a discovered camera by
 `frigateName`; fields you set win, the rest come from discovery. Use it to add a sub

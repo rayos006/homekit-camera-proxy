@@ -153,6 +153,7 @@ export function resolveCameras(config: AppConfig, discovered: DiscoveredCamera[]
       frigateName: d.frigateName,
       name: d.name,
       streams: { ...d.streams },
+      audio: d.audio,
       motion: { labels: d.motion.labels },
     });
   }

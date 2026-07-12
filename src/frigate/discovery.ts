@@ -7,6 +7,7 @@ export interface DiscoveredCamera {
   frigateName: string;
   name: string;
   streams: { main: string; sub?: string };
+  audio: boolean;
   motion: { labels: string[] };
 }
 
@@ -58,6 +59,9 @@ export async function discoverFrigateCameras(
           frigateName: key,
           name: humanize(key),
           streams: { main: key, sub: `${key}_sub` in streams ? `${key}_sub` : undefined },
+          // audio on by default — the user mutes in the Home app if unwanted;
+          // cameras/streams without an audio track simply stay silent
+          audio: true,
           // person is the sensible HomeKit-notification default; widen per
           // camera with motion.labels in config to match Frigate's tracking
           motion: { labels: ["person"] },
